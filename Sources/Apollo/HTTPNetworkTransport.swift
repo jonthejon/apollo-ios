@@ -416,13 +416,13 @@ public class HTTPNetworkTransport {
     }
     
     // If there's a delegate, do a pre-flight check and allow modifications to the request.
+    // NOTE-JON: this is where we change the delegate right before the request being sent
     if
       let delegate = self.delegate,
       let preflightDelegate = delegate as? HTTPNetworkTransportPreflightDelegate {
       guard preflightDelegate.networkTransport(self, shouldSend: request) else {
         throw GraphQLHTTPRequestError.cancelledByDelegate
       }
-      
       preflightDelegate.networkTransport(self, willSend: &request)
     }
     

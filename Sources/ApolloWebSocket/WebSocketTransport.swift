@@ -6,16 +6,12 @@ import Foundation
 
 // MARK: - Transport Delegate
 
-public protocol WebSocketTransportDelegate: class {
+public protocol WebSocketTransportDelegate: class {}
+
+public protocol WebSocketTransportConnectionDelegate: WebSocketTransportDelegate {
   func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport)
   func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport)
   func webSocketTransport(_ webSocketTransport: WebSocketTransport, didDisconnectWithError error:Error?)
-}
-
-public extension WebSocketTransportDelegate {
-  func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport) {}
-  func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport) {}
-  func webSocketTransport(_ webSocketTransport: WebSocketTransport, didDisconnectWithError error:Error?) {}
 }
 
 // MARK: - WebSocketTransport
@@ -273,15 +269,20 @@ extension WebSocketTransport: WebSocketDelegate {
   public func websocketDidConnect(socket: WebSocketClient) {
     self.error = nil
     initServer()
+
+    guard let delegate = self.delegate, let connectionDelegate = delegate as? WebSocketTransportConnectionDelegate else {
+      return
+    }
+
     if reconnected {
-      self.delegate?.webSocketTransportDidReconnect(self)
+      delegate?.webSocketTransportDidReconnect(self)
       // re-send the subscriptions whenever we are re-connected
       // for the first connect, any subscriptions are already in queue
       for (_,msg) in self.subscriptions {
         write(msg)
       }
     } else {
-      self.delegate?.webSocketTransportDidConnect(self)
+      delegate?.webSocketTransportDidConnect(self)
     }
     
     reconnected = true
@@ -295,8 +296,12 @@ extension WebSocketTransport: WebSocketDelegate {
     } else {
       self.error = nil
     }
-    
-    self.delegate?.webSocketTransport(self, didDisconnectWithError: self.error)
+
+    if let delegate = self.delegate,
+      let connectionDelegate = delegate as? HTTPNetworkTransportTaskCompletedDelegate {
+      connectionDelegate.webSocketTransport(self, didDisconnectWithError: self.error)
+    }
+
     acked = false // need new connect and ack before sending
     
     if reconnect {
