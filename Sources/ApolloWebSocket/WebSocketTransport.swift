@@ -9,9 +9,15 @@ import Foundation
 public protocol WebSocketTransportDelegate: class {}
 
 public protocol WebSocketTransportConnectionDelegate: WebSocketTransportDelegate {
-  func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport)
-  func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport)
+  func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport, message: String?)
+  func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport, message: String?)
   func webSocketTransport(_ webSocketTransport: WebSocketTransport, didDisconnectWithError error:Error?)
+}
+
+public protocol WebSocketTransportPreConnectionDelegate: WebSocketTransportDelegate {
+  func webSocketTransport(
+    _ webSocketTransport: WebSocketTransport,
+    willConnect payload: inout GraphQLMap?)
 }
 
 // MARK: - WebSocketTransport
@@ -172,7 +178,13 @@ public class WebSocketTransport {
   public func initServer(reconnect: Bool = true) {
     self.reconnect = reconnect
     self.acked = false
-    
+
+    if let delegate = delegate,
+      let preConnectionDelegate = delegate as? WebSocketTransportPreConnectionDelegate
+    {
+      preConnectionDelegate.webSocketTransport(self, willConnect: &connectingPayload)
+    }
+
     if let str = OperationMessage(payload: self.connectingPayload, type: .connectionInit).rawMessage {
       write(str, force:true)
     }
@@ -275,14 +287,14 @@ extension WebSocketTransport: WebSocketDelegate {
     }
 
     if reconnected {
-      delegate?.webSocketTransportDidReconnect(self)
+      connectionDelegate.webSocketTransportDidReconnect(self, message: "from Jon")
       // re-send the subscriptions whenever we are re-connected
       // for the first connect, any subscriptions are already in queue
       for (_,msg) in self.subscriptions {
         write(msg)
       }
     } else {
-      delegate?.webSocketTransportDidConnect(self)
+      connectionDelegate.webSocketTransportDidConnect(self, message: "from Jon")
     }
     
     reconnected = true
@@ -298,7 +310,7 @@ extension WebSocketTransport: WebSocketDelegate {
     }
 
     if let delegate = self.delegate,
-      let connectionDelegate = delegate as? HTTPNetworkTransportTaskCompletedDelegate {
+      let connectionDelegate = delegate as? WebSocketTransportConnectionDelegate {
       connectionDelegate.webSocketTransport(self, didDisconnectWithError: self.error)
     }
 
