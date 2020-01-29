@@ -422,7 +422,7 @@ public class HTTPNetworkTransport {
       guard preflightDelegate.networkTransport(self, shouldSend: request) else {
         throw GraphQLHTTPRequestError.cancelledByDelegate
       }
-
+      
       preflightDelegate.networkTransport(self, willSend: &request)
     }
     
