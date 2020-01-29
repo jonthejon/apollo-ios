@@ -9,8 +9,8 @@ import Foundation
 public protocol WebSocketTransportDelegate: class {}
 
 public protocol WebSocketTransportConnectionDelegate: WebSocketTransportDelegate {
-  func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport, message: String?)
-  func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport, message: String?)
+  func webSocketTransportDidConnect(_ webSocketTransport: WebSocketTransport)
+  func webSocketTransportDidReconnect(_ webSocketTransport: WebSocketTransport)
   func webSocketTransport(_ webSocketTransport: WebSocketTransport, didDisconnectWithError error:Error?)
 }
 
@@ -287,14 +287,14 @@ extension WebSocketTransport: WebSocketDelegate {
     }
 
     if reconnected {
-      connectionDelegate.webSocketTransportDidReconnect(self, message: "from Jon")
+      connectionDelegate.webSocketTransportDidReconnect(self)
       // re-send the subscriptions whenever we are re-connected
       // for the first connect, any subscriptions are already in queue
       for (_,msg) in self.subscriptions {
         write(msg)
       }
     } else {
-      connectionDelegate.webSocketTransportDidConnect(self, message: "from Jon")
+      connectionDelegate.webSocketTransportDidConnect(self)
     }
     
     reconnected = true
